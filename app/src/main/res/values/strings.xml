@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">AppLogger</string>
+
+    <string name="welcome">欢迎使用 AppLogger v1.0, 请点击开始服务:\n</string>
+    <string name="startService">开始服务</string>
+    <string name="notice">
+        \n1. SD卡的applog.txt记录了App使用信息;\n
+        \n1.1. 请不要频繁打开applog.txt文件;\n
+        \n1.2. 我们最终只回收applog.txt文件;\n
+        \n2. 请重启手机后, 打开软件点击开始服务;\n
+        \n3. 有问题请联系: 1060185294@qq.com.\n
+    </string>
+    <string name="action_settings">Settings</string>
+</resources>
