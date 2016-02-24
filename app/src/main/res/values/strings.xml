@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">AppLogger</string>
 
-    <string name="welcome">欢迎使用 AppLogger v1.0, 请点击开始服务:\n</string>
+    <string name="welcome">欢迎使用 AppLogger v1.2, 请点击开始服务:\n</string>
     <string name="startService">开始服务</string>
     <string name="notice">
         \n1. SD卡的applog.txt记录了App使用信息;\n

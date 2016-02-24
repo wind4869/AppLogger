@@ -1,9 +1,5 @@
 package info.wind4869.applogger.Service;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 
@@ -12,11 +8,12 @@ import android.app.Service;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.os.Environment;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.util.Log;
 
 import info.wind4869.applogger.Tools.Process;
+import info.wind4869.applogger.Tools.Utility;
 
 public class LogService extends Service {
 
@@ -24,16 +21,10 @@ public class LogService extends Service {
 		numOfInstalledApp = 0;
 		prevProcess = null;
 		curProcess = null;
+		isScreenOn = false;
 
 		nameInfoMap = new HashMap<>();
-
-		// get file path in sdCard
-		File sdCardDir = Environment.getExternalStorageDirectory();
-		if (sdCardDir != null) {
-			filePath = sdCardDir.toString() + fileName;
-		} else {
-			throw new RuntimeException("sd card not found");
-		}
+        utility = new Utility();
 	}
 
 	@Override
@@ -51,7 +42,7 @@ public class LogService extends Service {
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		Log.d("AppLogger", "LogService onStartCommand");
+        Log.d("AppLogger", "LogService onStartCommand");
 
 		return super.onStartCommand(intent, flags, startId);
 	}
@@ -85,6 +76,9 @@ public class LogService extends Service {
 	}
 
 	private void initOtherMembers() {
+		// get PowerManager
+		powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+
 		// get ActivityManager
 		activityManager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
 
@@ -106,10 +100,26 @@ public class LogService extends Service {
 	}
 
 	private void logAppUsages() {
+
+		// get the switches of screen
+		if (powerManager.isScreenOn() ^ isScreenOn) {
+			isScreenOn = !isScreenOn;
+
+			if (isScreenOn) {
+				utility.writeRecordToExternalStorage(
+                        (new StringBuilder()).append("[").append(utility.getCurrentTime()).toString());
+				Log.d("AppLogger", "session starts");
+			} else {
+                utility.writeRecordToExternalStorage(
+                        (new StringBuilder()).append("]").append(utility.getCurrentTime()).toString());
+				Log.d("AppLogger", "session ends");
+			}
+		}
+
 		// get name of current process (deprecated after android 5.0)
 		String processName = activityManager.getRunningTasks(1).get(0).topActivity.getPackageName();
 
-		if(!processName.equals("info.wind4869.applogger") && !processName.equals("android")) {
+		if (!processName.equals("info.wind4869.applogger") && !processName.equals("android")) {
 
 			if (prevProcess == null) {
 				curProcess = createProcess(processName);
@@ -128,7 +138,7 @@ public class LogService extends Service {
 				Log.d("AppLogger", prevProcess.getAppLabel() + " ends at " + curProcess.getStartTime());
 
 				// write previous process record to file
-				writeRecordToFile(prevProcess.toString(), filePath);
+                utility.writeRecordToExternalStorage(prevProcess.toString());
 
 				// start of current process
 				prevProcess = curProcess; // pay attention!
@@ -146,53 +156,19 @@ public class LogService extends Service {
 		String appLabel = applicationInfo.loadLabel(packageManager).toString();
 		String uid = String.valueOf(applicationInfo.uid);
 
-		// get current time
-		Calendar calendar = Calendar.getInstance();
-
-		int year = calendar.get(Calendar.YEAR);
-		int month = calendar.get(Calendar.MONTH) + 1;
-		int day = calendar.get(Calendar.DAY_OF_MONTH);
-		int hour = calendar.get(Calendar.HOUR_OF_DAY);
-		int minute = calendar.get(Calendar.MINUTE);
-		int second = calendar.get(Calendar.SECOND);
-
-		String startTime = new StringBuffer(String.valueOf(year))
-				.append("-").append(month).append("-").append(day).append(" ")
-				.append(hour).append(":").append(minute).append(":").append(second)
-				.toString();
-
-		return new Process(processName, appLabel, startTime, null, uid);
-	}
-
-	private void writeRecordToFile(String record, String fileName) {
-		FileWriter fileWriter = null;
-		try {
-			fileWriter = new FileWriter(fileName, true);
-			fileWriter.write(record + "\n");
-			fileWriter.flush();
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			if (fileWriter != null) {
-				try {
-					fileWriter.close();
-				} catch (IOException e1) {
-					throw new RuntimeException("fail to close file");
-				}
-			}
-		}
+		return new Process(processName, appLabel, utility.getCurrentTime(), null, uid);
 	}
 
 	private int numOfInstalledApp;
 	private Process prevProcess;
 	private Process curProcess;
+	private boolean isScreenOn;
 
 	private HashMap<String, ApplicationInfo> nameInfoMap;
-	private String filePath;
+    private Utility utility;
 
+	private PowerManager powerManager;
 	private ActivityManager activityManager;
 	private PackageManager packageManager;
 	List<ApplicationInfo> applicationInfos;
-
-	private static final String fileName = "/applog.txt";
 }
